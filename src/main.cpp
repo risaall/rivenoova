@@ -3,6 +3,12 @@
 #include <BTS7960.h>
 #include <FS.h>
 #include <SPIFFS.h>
+#include <NMEAGPS.h>
+#include <HardwareSerial.h>
+
+HardwareSerial gpsSerial(1); // UART1 di ESP32
+NMEAGPS gps;
+gps_fix fix;
 
 // Motor 1 pins (kiri)
 #define L_EN 21
@@ -93,6 +99,10 @@ void handleStatus() {
 }
 
 void setup() {
+  Serial.begin(115200); // Serial Monitor
+  gpsSerial.begin(9600, SERIAL_8N1, 16, 17); // RX = 16, TX = 17
+  Serial.println("NeoGPS test start...");
+
   Serial.begin(115200);
 
   // Init Motors
@@ -136,4 +146,38 @@ void setup() {
 
 void loop() {
   server.handleClient();
+   while (gps.available(gpsSerial)) {
+    fix = gps.read();
+
+    if (fix.valid.location) {
+      Serial.print("Latitude: ");
+      Serial.println(fix.latitude(), 6);
+      Serial.print("Longitude: ");
+      Serial.println(fix.longitude(), 6);
+    }
+
+    if (fix.valid.date && fix.valid.time) {
+      Serial.print("Date: ");
+      Serial.print(fix.dateTime.day);
+      Serial.print('/');
+      Serial.print(fix.dateTime.month);
+      Serial.print('/');
+      Serial.print(fix.dateTime.year);
+      Serial.print("  Time: ");
+      Serial.print(fix.dateTime.hours);
+      Serial.print(':');
+      Serial.print(fix.dateTime.minutes);
+      Serial.print(':');
+      Serial.println(fix.dateTime.seconds);
+    }
+
+    if (fix.valid.satellites) {
+      Serial.print("Satellites: ");
+      Serial.println(fix.satellites);
+    }
+
+    Serial.println("-------------------");
+  }
 }
+
+
